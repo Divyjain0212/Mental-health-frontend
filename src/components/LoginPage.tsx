@@ -52,6 +52,7 @@ const LoginPage = () => {
           <form onSubmit={handleSubmit} className="login-form">
             <h2>Mastishk Setu <br/><h1>Campus Portal</h1></h2>
             <p>Sign in to access your resources and support tools.</p>
+            
             <div className="form-group">
               <label htmlFor="email">Email Address</label>
               <input 
@@ -74,7 +75,10 @@ const LoginPage = () => {
               />
             </div>
             {error && <p className="error-message">{error}</p>}
-            <button type="submit" className="login-button" disabled={loading}>{loading ? 'Signing in...' : 'Sign In'}</button>
+            <button type="submit" className="login-button" disabled={loading}>
+              {loading ? 'Signing in...' : 'Sign In'}
+            </button>
+            
             <div className="login-footer">By continuing you agree to our privacy policy.</div>
           </form>
         </div>
