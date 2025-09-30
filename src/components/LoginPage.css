@@ -129,23 +129,3 @@
   text-align: center;
   color: #6b7280;
 }
-
-/* Register Toggle */
-.register-toggle {
-  margin: 16px 0;
-  text-align: center;
-}
-
-.toggle-button {
-  background: none;
-  border: none;
-  color: #2563eb;
-  font-size: 0.875rem;
-  cursor: pointer;
-  text-decoration: underline;
-  padding: 4px 0;
-}
-
-.toggle-button:hover {
-  color: #1d4ed8;
-}
