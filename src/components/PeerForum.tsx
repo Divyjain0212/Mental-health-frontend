@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { MessageCircle, Heart, Reply, Clock, Shield, Users, Plus, Trash2 } from 'lucide-react';
+import { Heart, MessageCircle, Plus, Shield, Users, Clock, Trash2, CornerDownRight } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useAuth } from '../contexts/AuthContext';
 import axios from 'axios';
+import { apiConfig } from '../utils/apiConfig';
 
 // --- Interfaces for our data structures ---
 interface ReplyContent {
@@ -46,8 +47,6 @@ export const PeerForum: React.FC = () => {
   const { t } = useLanguage();
   const { user, token } = useAuth();
   const [posts, setPosts] = useState<ForumPost[]>([]);
-  const API = (import.meta as any)?.env?.VITE_API_URL || 'http://localhost:5000';
-  const API_FALLBACKS = [API, 'http://localhost:5000', ''];
 
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [showNewPostForm, setShowNewPostForm] = useState(false);
@@ -67,19 +66,13 @@ export const PeerForum: React.FC = () => {
   ];
 
   const loadPosts = async () => {
-    let lastErr: any = null;
-    for (const base of API_FALLBACKS) {
-      try {
-        const url = base ? `${base}/api/forum` : '/api/forum';
-        const { data } = await axios.get(url, token ? { headers: { Authorization: `Bearer ${token}` } } : undefined);
-        setPosts(data);
-        return;
-      } catch (e: any) {
-        lastErr = e;
-      }
+    try {
+      const { data } = await axios.get(apiConfig.endpoints.forum, token ? { headers: { Authorization: `Bearer ${token}` } } : undefined);
+      setPosts(data);
+    } catch (e: any) {
+      console.error('Forum load error', e);
+      window.alert(`${e?.response?.status || ''} ${e?.response?.statusText || ''}: ${e?.response?.data?.message || e?.message || 'Failed to load posts'}`);
     }
-    console.error('Forum load error', lastErr);
-    window.alert(`${lastErr?.response?.status || ''} ${lastErr?.response?.statusText || ''}: ${lastErr?.response?.data?.message || lastErr?.message || 'Failed to load posts'}`);
   };
 
   useEffect(() => {
@@ -98,29 +91,19 @@ export const PeerForum: React.FC = () => {
         return;
     }
     try {
-      let ok = false;
-      for (const base of API_FALLBACKS) {
-        try {
-          const url = base ? `${base}/api/forum` : '/api/forum';
-          const res = await axios.post(url, {
+      const res = await axios.post(apiConfig.endpoints.forum, {
         title: newPost.title,
         content: newPost.content,
         category: newPost.category,
         isAnonymous: newPost.isAnonymous,
         tags: newPost.tags.split(',').map(t => t.trim()).filter(Boolean)
-          }, token ? { headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' } } : { headers: { 'Content-Type': 'application/json' } });
-          if (res.status === 201 || res.status === 200 || res.status === 204) {
-            ok = true;
-            break;
-          }
-        } catch (e) {
-          // try next base
-        }
+      }, token ? { headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' } } : { headers: { 'Content-Type': 'application/json' } });
+      
+      if (res.status === 201 || res.status === 200 || res.status === 204) {
+        setShowNewPostForm(false);
+        setNewPost({ title: '', content: '', category: 'General Discussion', isAnonymous: true, tags: '' });
+        loadPosts();
       }
-      if (!ok) throw new Error('All endpoints failed');
-      setShowNewPostForm(false);
-      setNewPost({ title: '', content: '', category: 'General Discussion', isAnonymous: true, tags: '' });
-      loadPosts();
     } catch (e: any) {
       console.error('Forum create error', e);
       window.alert(e?.response?.data?.message || e?.message || 'Failed to share post');
@@ -129,16 +112,10 @@ export const PeerForum: React.FC = () => {
 
   const handleLike = async (postId: string) => {
     try {
-      let ok = false;
-      for (const base of API_FALLBACKS) {
-        try {
-          const url = base ? `${base}/api/forum/${postId}/like` : `/api/forum/${postId}/like`;
-          const res = await axios.post(url, {}, token ? { headers: { Authorization: `Bearer ${token}` } } : undefined);
-          if (res.status === 200) { ok = true; break; }
-        } catch {}
+      const res = await axios.post(`${apiConfig.endpoints.forum}/${postId}/like`, {}, token ? { headers: { Authorization: `Bearer ${token}` } } : undefined);
+      if (res.status === 200) {
+        loadPosts();
       }
-      if (!ok) throw new Error('Failed to like');
-      loadPosts();
     } catch (e: any) {
       console.error('Forum like error', e);
       window.alert(e?.response?.data?.message || e?.message || 'Failed to like post');
@@ -148,16 +125,10 @@ export const PeerForum: React.FC = () => {
   const handleDelete = async (postId: string) => {
     if (!window.confirm("Are you sure you want to delete this post?")) return;
     try {
-      let ok = false;
-      for (const base of API_FALLBACKS) {
-        try {
-          const url = base ? `${base}/api/forum/${postId}` : `/api/forum/${postId}`;
-          const res = await axios.delete(url, token ? { headers: { Authorization: `Bearer ${token}` } } : undefined);
-          if (res.status === 200) { ok = true; break; }
-        } catch {}
+      const res = await axios.delete(`${apiConfig.endpoints.forum}/${postId}`, token ? { headers: { Authorization: `Bearer ${token}` } } : undefined);
+      if (res.status === 200) {
+        loadPosts();
       }
-      if (!ok) throw new Error('Failed to delete');
-      loadPosts();
     } catch (e: any) {
       console.error('Forum delete error', e);
       window.alert(e?.response?.data?.message || e?.message || 'Failed to delete post');
@@ -167,18 +138,12 @@ export const PeerForum: React.FC = () => {
   const handleReplySubmit = async (postId: string) => {
     if (!replyText.trim()) return;
     try {
-      let ok = false;
-      for (const base of API_FALLBACKS) {
-        try {
-          const url = base ? `${base}/api/forum/${postId}/reply` : `/api/forum/${postId}/reply`;
-          const res = await axios.post(url, { text: replyText }, token ? { headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' } } : { headers: { 'Content-Type': 'application/json' } });
-          if (res.status === 201 || res.status === 200) { ok = true; break; }
-        } catch {}
+      const res = await axios.post(`${apiConfig.endpoints.forum}/${postId}/reply`, { text: replyText }, token ? { headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' } } : { headers: { 'Content-Type': 'application/json' } });
+      if (res.status === 201 || res.status === 200) {
+        setReplyingTo(null);
+        setReplyText('');
+        loadPosts();
       }
-      if (!ok) throw new Error('Failed to reply');
-      setReplyingTo(null);
-      setReplyText('');
-      loadPosts();
     } catch (e: any) {
       console.error('Forum reply error', e);
       window.alert(e?.response?.data?.message || e?.message || 'Failed to reply');
@@ -304,7 +269,7 @@ export const PeerForum: React.FC = () => {
                     <span className="flex items-center space-x-1"><MessageCircle size={16} /><span>{post.replies.length} replies</span></span>
                   </div>
                   <button onClick={() => setReplyingTo(replyingTo === post._id ? null : post._id)} className="flex items-center space-x-1 text-blue-600 hover:text-blue-700 text-sm font-medium">
-                    <Reply size={16} /><span>{replyingTo === post._id ? 'Cancel' : 'Reply'}</span>
+                    <CornerDownRight size={16} /><span>{replyingTo === post._id ? 'Cancel' : 'Reply'}</span>
                   </button>
                 </div>
                 {replyingTo === post._id && (

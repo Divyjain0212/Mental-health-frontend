@@ -4,6 +4,7 @@ import {
   BarChart3, Users, MessageSquare, TrendingUp, AlertTriangle,
   X, Download, Filter, Eye, MapPin
 } from 'lucide-react';
+import { apiConfig } from '../utils/apiConfig';
 
 // The AdminDashboardProps interface is no longer needed
 
@@ -58,19 +59,19 @@ export const AdminDashboard: React.FC = () => {
 
   useEffect(() => {
     // fetch overview from backend, ignore failures
-    fetch('http://localhost:5000/api/admin/overview')
+    fetch(`${apiConfig.endpoints.admin}/overview`)
       .then(r => r.ok ? r.json() : null)
       .then(d => setOverview(d))
       .catch(() => {});
-    fetch('http://localhost:5000/api/counsellors')
+    fetch(apiConfig.endpoints.counsellors)
       .then(r => r.ok ? r.json() : [])
       .then(d => setCounsellors(d))
       .catch(() => {});
-    fetch('http://localhost:5000/api/admin/weekly-trends')
+    fetch(`${apiConfig.endpoints.admin}/weekly-trends`)
       .then(r => r.ok ? r.json() : [])
       .then(d => setWeekly(d))
       .catch(() => {});
-    fetch('http://localhost:5000/api/admin/campus-breakdown')
+    fetch(`${apiConfig.endpoints.admin}/campus-breakdown`)
       .then(r => r.ok ? r.json() : [])
       .then(d => setCampus(d))
       .catch(() => {});

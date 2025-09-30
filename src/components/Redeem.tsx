@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
+import { apiConfig } from '../utils/apiConfig';
 
 interface Voucher {
   _id: string;
@@ -15,14 +16,14 @@ const Redeem: React.FC = () => {
   const [message, setMessage] = useState('');
 
   useEffect(() => {
-    axios.get('http://localhost:5000/api/vouchers')
+    axios.get(apiConfig.endpoints.vouchers)
       .then(res => setVouchers(res.data))
       .catch(() => setVouchers([]));
   }, []);
 
   const redeem = async (id: string) => {
     try {
-      const { data } = await axios.post('http://localhost:5000/api/vouchers/redeem', { voucherId: id });
+      const { data } = await axios.post(`${apiConfig.endpoints.vouchers}/redeem`, { voucherId: id });
       setMessage(`Redeemed! Code: ${data.redemption.code}. Remaining points: ${data.remainingPoints}`);
       setVouchers(prev => prev.map(v => v._id === id ? { ...v, stock: v.stock - 1 } : v));
     } catch (e: any) {

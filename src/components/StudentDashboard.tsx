@@ -7,6 +7,7 @@ import toast from 'react-hot-toast';
 import axios from 'axios';
 import { Calendar as CalIcon } from 'lucide-react';
 import MoodDetector from './MoodDetector';
+import { apiConfig } from '../utils/apiConfig';
 
 // Mood history will be fetched from backend /api/moods/stats
 const mockMoodHistory: { day: string; mood: number }[] = [];
@@ -50,7 +51,7 @@ const StudentDashboard = () => {
   useEffect(() => {
     const load = async () => {
       try {
-        const { data } = await axios.get('http://localhost:5000/api/appointments/me', token ? { headers: { Authorization: `Bearer ${token}` } } : undefined);
+        const { data } = await axios.get(`${apiConfig.endpoints.appointments}/me`, token ? { headers: { Authorization: `Bearer ${token}` } } : undefined);
         // For student, entries include counsellor populated
         const upcoming = data
           .filter((a: any) => a.status === 'scheduled')
@@ -64,9 +65,9 @@ const StudentDashboard = () => {
 
   const cancelAppointment = async (id: string) => {
     try {
-      await axios.delete(`http://localhost:5000/api/appointments/${id}`, token ? { headers: { Authorization: `Bearer ${token}` } } : undefined);
+      await axios.delete(`${apiConfig.endpoints.appointments}/${id}`, token ? { headers: { Authorization: `Bearer ${token}` } } : undefined);
       // Refetch after delete to ensure backend state is reflected
-      const { data } = await axios.get('http://localhost:5000/api/appointments/me', token ? { headers: { Authorization: `Bearer ${token}` } } : undefined);
+      const { data } = await axios.get(`${apiConfig.endpoints.appointments}/me`, token ? { headers: { Authorization: `Bearer ${token}` } } : undefined);
       const upcoming = data
         .filter((a: any) => a.status === 'scheduled')
         .sort((a: any, b: any) => new Date(a.date).getTime() - new Date(b.date).getTime())
@@ -78,13 +79,13 @@ const StudentDashboard = () => {
   const handleMoodSelect = async (mood: string) => {
     setSelectedMood(mood);
     try {
-      const { data } = await axios.post('http://localhost:5000/api/moods', { mood, source: 'self' });
+      const { data } = await axios.post(apiConfig.endpoints.moods, { mood, source: 'self' });
       if (data?.gamification) {
         setPoints(data.gamification.points);
         setStreak(data.gamification.streakCount);
       }
       // Refresh stats after check-in
-      const stats = await axios.get('http://localhost:5000/api/moods/stats');
+      const stats = await axios.get(`${apiConfig.endpoints.moods}/stats`);
       if (stats?.data) {
         setHistory(stats.data.history7d || []);
         setPoints(stats.data.points || 0);
@@ -97,7 +98,7 @@ const StudentDashboard = () => {
   useEffect(() => {
     const loadStats = async () => {
       try {
-        const { data } = await axios.get('http://localhost:5000/api/moods/stats');
+        const { data } = await axios.get(`${apiConfig.endpoints.moods}/stats`);
         setHistory(data.history7d || []);
         setPoints(data.points || 0);
         setStreak(data.streakCount || 0);

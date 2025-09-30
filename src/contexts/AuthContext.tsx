@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 import axios from 'axios';
+import { apiConfig } from '../utils/apiConfig';
 
 interface User {
   _id: string;
@@ -36,7 +37,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       if (token) {
         try {
           axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-          const { data } = await axios.get('http://localhost:5000/api/auth/profile');
+          const { data } = await axios.get(apiConfig.endpoints.auth.profile);
           setUser(data);
         } catch (error) {
           logout();

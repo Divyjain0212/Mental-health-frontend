@@ -4,6 +4,7 @@ import DOMPurify from 'dompurify';
 import { useLanguage } from '../contexts/LanguageContext';
 import axios from 'axios';
 import { useAuth } from '../contexts/AuthContext';
+import { apiConfig } from '../utils/apiConfig';
 
 interface Message {
   id: string;
@@ -30,7 +31,7 @@ export const AIChat: React.FC = () => {
 
   const fetchAIResponse = async (userMessage: string): Promise<string> => {
     try {
-      const { data } = await axios.post('http://localhost:5000/api/chat', { message: userMessage });
+      const { data } = await axios.post(apiConfig.endpoints.chat, { message: userMessage });
       return data.reply || 'Sorry, I could not generate a response.';
     } catch (e) {
       return 'Sorry, I am having trouble responding right now. Please try again later.';
@@ -63,7 +64,7 @@ export const AIChat: React.FC = () => {
     if (crisisDetected(currentInput)) {
       try {
         await axios.post(
-          'http://localhost:5000/api/alerts',
+          apiConfig.endpoints.alerts,
           { message: currentInput, level: 'critical' },
           token ? { headers: { Authorization: `Bearer ${token}` } } : undefined
         );

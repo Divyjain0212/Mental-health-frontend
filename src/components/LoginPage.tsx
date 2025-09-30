@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext'; // 1. Import the useAuth hook
+import { apiConfig } from '../utils/apiConfig';
 import './LoginPage.css';
 
 const LoginPage = () => {
@@ -19,7 +20,7 @@ const LoginPage = () => {
     setLoading(true);
 
     try {
-      const response = await axios.post('http://localhost:5000/api/auth/login', {
+      const response = await axios.post(apiConfig.endpoints.auth.login, {
         email,
         password,
       });

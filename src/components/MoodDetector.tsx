@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import axios from 'axios';
+import { apiConfig } from '../utils/apiConfig';
 
 // Lightweight on-device estimator using face expressions via face-api.js
 // Requires models to be loaded from a public path /models (add files in public if available)
@@ -57,7 +58,7 @@ const MoodDetector: React.FC = () => {
     } catch {}
     setMood(detected);
     try {
-      await axios.post('http://localhost:5000/api/moods', { mood: detected, source: 'camera' });
+      await axios.post(apiConfig.endpoints.moods, { mood: detected, source: 'camera' });
     } catch {}
   };
 

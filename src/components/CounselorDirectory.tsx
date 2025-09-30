@@ -2,6 +2,7 @@ import React, { useState, useMemo, FC, useEffect } from 'react';
 import { MapPin, Phone, Mail, Calendar, Star, Filter, Clock, Languages, X, UserCheck } from 'lucide-react';
 import axios from 'axios';
 import { useAuth } from '../contexts/AuthContext';
+import { apiConfig } from '../utils/apiConfig';
 
 // --- INTERFACES & MOCK DATA ---
 
@@ -103,7 +104,7 @@ export const CounselorDirectory: FC = () => {
 
   useEffect(() => {
     const loadCounsellors = async () => {
-      const { data } = await axios.get('http://localhost:5000/api/counsellors');
+      const { data } = await axios.get(apiConfig.endpoints.counsellors);
       const mapped: Counselor[] = data.map((u: any) => ({
         id: u._id,
         name: u.name || u.email,
@@ -152,7 +153,7 @@ export const CounselorDirectory: FC = () => {
     const doBook = async () => {
       try {
         const { data } = await axios.post(
-          'http://localhost:5000/api/appointments',
+          apiConfig.endpoints.appointments,
           { counsellorId: selectedCounselor.id, date: bookingDetails.date, time: bookingDetails.time },
           token ? { headers: { Authorization: `Bearer ${token}` } } : undefined
         );
@@ -175,9 +176,9 @@ export const CounselorDirectory: FC = () => {
 
   const handleCancelAppointment = async (appointmentId: string): Promise<void> => {
       try {
-        await axios.delete(`http://localhost:5000/api/appointments/${appointmentId}`, token ? { headers: { Authorization: `Bearer ${token}` } } : undefined);
+        await axios.delete(`${apiConfig.endpoints.appointments}/${appointmentId}`, token ? { headers: { Authorization: `Bearer ${token}` } } : undefined);
         // Refetch to ensure backend state is authoritative
-        const { data } = await axios.get('http://localhost:5000/api/appointments/me', token ? { headers: { Authorization: `Bearer ${token}` } } : undefined);
+        const { data } = await axios.get(`${apiConfig.endpoints.appointments}/me`, token ? { headers: { Authorization: `Bearer ${token}` } } : undefined);
         const upcoming: Appointment[] = data
           .filter((a: any) => a.status === 'scheduled')
           .sort((a: any, b: any) => new Date(a.date).getTime() - new Date(b.date).getTime())
@@ -192,7 +193,7 @@ export const CounselorDirectory: FC = () => {
   useEffect(() => {
     const load = async () => {
       try {
-        const { data } = await axios.get('http://localhost:5000/api/appointments/me', token ? { headers: { Authorization: `Bearer ${token}` } } : undefined);
+        const { data } = await axios.get(`${apiConfig.endpoints.appointments}/me`, token ? { headers: { Authorization: `Bearer ${token}` } } : undefined);
         const upcoming: Appointment[] = data
           .filter((a: any) => a.status === 'scheduled')
           .sort((a: any, b: any) => new Date(a.date).getTime() - new Date(b.date).getTime())

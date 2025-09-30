@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import { useAuth } from '../contexts/AuthContext';
+import { apiConfig } from '../utils/apiConfig';
 
 interface AppointmentItem {
   _id: string;
@@ -25,11 +26,11 @@ const CounsellorDashboard = () => {
   useEffect(() => {
     const load = async () => {
       try {
-        const { data } = await axios.get('http://localhost:5000/api/appointments/me', {
+        const { data } = await axios.get(`${apiConfig.endpoints.appointments}/me`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         setAppointments(data);
-        const { data: alertsData } = await axios.get('http://localhost:5000/api/alerts/inbox', {
+        const { data: alertsData } = await axios.get(`${apiConfig.endpoints.alerts}/inbox`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         setAlerts(alertsData);
@@ -45,7 +46,7 @@ const CounsellorDashboard = () => {
   const updateStatus = async (id: string, status: string) => {
     try {
       const { data } = await axios.patch(
-        `http://localhost:5000/api/appointments/${id}/status`,
+        `${apiConfig.endpoints.appointments}/${id}/status`,
         { status },
         { headers: { Authorization: `Bearer ${token}` } }
       );
