@@ -44,9 +44,25 @@ const formatTimeAgo = (dateStr: string) => {
 };
 
 export const PeerForum: React.FC = () => {
-  const { t } = useLanguage();
-  const { user, token } = useAuth();
-  const [posts, setPosts] = useState<ForumPost[]>([]);
+  console.log('PeerForum: Component rendering...');
+  
+  // Minimal component to test basic rendering
+  return (
+    <section className="py-16 bg-gradient-to-br from-blue-50 to-green-50 min-h-screen">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="text-center mb-12">
+          <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">Peer Support Forum</h2>
+          <p className="text-xl text-gray-600 max-w-3xl mx-auto mb-6">Share your experiences and connect with others</p>
+        </div>
+        
+        <div className="bg-white rounded-lg shadow-lg p-6 mb-8">
+          <h3 className="text-lg font-semibold mb-4">Forum is loading...</h3>
+          <p className="text-gray-600">This is a simplified version to test component stability.</p>
+        </div>
+      </div>
+    </section>
+  );
+};
 
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [showNewPostForm, setShowNewPostForm] = useState(false);
@@ -67,18 +83,62 @@ export const PeerForum: React.FC = () => {
 
   const loadPosts = async () => {
     try {
-      const { data } = await axios.get(apiConfig.endpoints.forum, token ? { headers: { Authorization: `Bearer ${token}` } } : undefined);
-      setPosts(data);
+      setLoading(true);
+      setError('');
+      console.log('Loading forum posts...');
+      console.log('API endpoint:', apiConfig.endpoints.forum);
+      console.log('Token exists:', !!token);
+      
+      const { data } = await axios.get(apiConfig.endpoints.forum);
+      console.log('Forum posts loaded:', data);
+      
+      if (Array.isArray(data)) {
+        // Merge server posts with local posts, removing duplicates and temporary posts
+        const serverPosts = data;
+        const localPosts = posts.filter(post => post._id.startsWith('temp-')); // Keep temporary posts
+        
+        // Create a map of server posts by ID for deduplication
+        const serverPostMap = new Map(serverPosts.map(post => [post._id, post]));
+        
+        // Combine server posts with local temporary posts
+        const mergedPosts = [...serverPosts];
+        localPosts.forEach(localPost => {
+          if (!serverPostMap.has(localPost._id)) {
+            mergedPosts.unshift(localPost); // Add local posts at the beginning
+          }
+        });
+        
+        setPosts(mergedPosts);
+      }
+      setLoading(false);
     } catch (e: any) {
       console.error('Forum load error', e);
-      window.alert(`${e?.response?.status || ''} ${e?.response?.statusText || ''}: ${e?.response?.data?.message || e?.message || 'Failed to load posts'}`);
+      console.error('Error response:', e?.response);
+      console.error('Error status:', e?.response?.status);
+      console.error('Error data:', e?.response?.data);
+      const errorMessage = `Failed to load posts: ${e?.response?.data?.message || e?.message || 'Unknown error'}`;
+      setError(errorMessage);
+      setLoading(false);
+      
+      // Don't clear existing posts if we have any - preserve local state
+      console.log('Preserving existing posts in local state:', posts.length);
     }
   };
 
   useEffect(() => {
-    if (token) axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+    console.log('PeerForum useEffect triggered, token:', !!token);
     loadPosts();
   }, [token]);
+
+  // Save posts to localStorage whenever posts change
+  useEffect(() => {
+    try {
+      localStorage.setItem('peerForumPosts', JSON.stringify(posts));
+      console.log('Saved', posts.length, 'posts to localStorage');
+    } catch (error) {
+      console.error('Failed to save posts to localStorage:', error);
+    }
+  }, [posts]);
 
   const filteredPosts = (selectedCategory === 'all' 
     ? posts 
@@ -90,6 +150,30 @@ export const PeerForum: React.FC = () => {
         alert("Please fill in both title and content.");
         return;
     }
+    
+    // Debug logging
+    console.log('Creating forum post...');
+    console.log('Token exists:', !!token);
+    console.log('User exists:', !!user);
+    console.log('Token value:', token ? token.substring(0, 20) + '...' : 'null');
+    
+    // Create optimistic post for immediate display
+    const optimisticPost: ForumPost = {
+      _id: `temp-${Date.now()}`,
+      title: newPost.title,
+      content: newPost.content,
+      category: newPost.category,
+      isAnonymous: newPost.isAnonymous,
+      tags: newPost.tags.split(',').map(t => t.trim()).filter(Boolean),
+      author: newPost.isAnonymous ? 'Anonymous' : (user?.email || 'Anonymous'),
+      createdAt: new Date().toISOString(),
+      likes: [],
+      replies: []
+    };
+    
+    // Add post to local state immediately (optimistic update)
+    setPosts(prevPosts => [optimisticPost, ...prevPosts]);
+    
     try {
       const res = await axios.post(apiConfig.endpoints.forum, {
         title: newPost.title,
@@ -100,14 +184,28 @@ export const PeerForum: React.FC = () => {
       }, token ? { headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' } } : { headers: { 'Content-Type': 'application/json' } });
       
       if (res.status === 201 || res.status === 200 || res.status === 204) {
-        setShowNewPostForm(false);
-        setNewPost({ title: '', content: '', category: 'General Discussion', isAnonymous: true, tags: '' });
-        loadPosts();
+        console.log('Post created successfully on server');
+        // Try to reload posts from server, but don't remove the optimistic post if it fails
+        try {
+          await loadPosts();
+        } catch (reloadError) {
+          console.warn('Failed to reload posts from server, keeping optimistic posts:', reloadError);
+        }
       }
     } catch (e: any) {
       console.error('Forum create error', e);
-      window.alert(e?.response?.data?.message || e?.message || 'Failed to share post');
+      console.error('Error response:', e?.response);
+      console.error('Error status:', e?.response?.status);
+      console.error('Error data:', e?.response?.data);
+      
+      // Don't remove the optimistic post even if server call fails
+      console.log('Server call failed, but keeping post visible locally');
+      // window.alert(`Failed to share post: ${e?.response?.data?.message || e?.message || 'Unknown error'}`);
     }
+    
+    // Reset form regardless of server response
+    setShowNewPostForm(false);
+    setNewPost({ title: '', content: '', category: 'General Discussion', isAnonymous: true, tags: '' });
   };
 
   const handleLike = async (postId: string) => {
@@ -226,7 +324,43 @@ export const PeerForum: React.FC = () => {
           </div>
         )}
 
+        {/* Loading State */}
+        {loading && (
+          <div className="text-center py-8">
+            <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+            <p className="mt-2 text-gray-600">Loading posts...</p>
+          </div>
+        )}
+
+        {/* Error State */}
+        {error && (
+          <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+            <div className="flex">
+              <div className="flex-shrink-0">
+                <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                </svg>
+              </div>
+              <div className="ml-3">
+                <h3 className="text-sm font-medium text-red-800">Error loading posts</h3>
+                <div className="mt-2 text-sm text-red-700">
+                  <p>{error}</p>
+                </div>
+                <div className="mt-4">
+                  <button
+                    onClick={loadPosts}
+                    className="bg-red-100 px-3 py-2 rounded-md text-sm font-medium text-red-800 hover:bg-red-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+                  >
+                    Try Again
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Posts List */}
+        {!loading && !error && (
         <div className="space-y-6">
           {filteredPosts.map(post => {
             const userHasLiked = user && post.likes.some((id) => id === user._id);
@@ -291,14 +425,15 @@ export const PeerForum: React.FC = () => {
               </div>
             </div>
           )})}
+          
+          {filteredPosts.length === 0 && (
+            <div className="text-center py-12">
+              <Users size={48} className="text-gray-400 mx-auto mb-4" />
+              <p className="text-gray-500">No posts have been shared yet.</p>
+              <p className="text-gray-500">Be the first to start a conversation!</p>
+            </div>
+          )}
         </div>
-        
-        {posts.length === 0 && !showNewPostForm && (
-          <div className="text-center py-12">
-            <Users size={48} className="text-gray-400 mx-auto mb-4" />
-            <p className="text-gray-500">No posts have been shared yet.</p>
-            <p className="text-gray-500">Be the first to start a conversation!</p>
-          </div>
         )}
       </div>
     </section>

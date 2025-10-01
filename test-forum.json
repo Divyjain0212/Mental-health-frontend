@@ -1,0 +1,6 @@
+{
+  "title": "Test Forum Post",
+  "content": "This is a test forum post to check if the database is working.",
+  "category": "general",
+  "isAnonymous": false
+}

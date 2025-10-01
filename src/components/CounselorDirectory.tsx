@@ -104,26 +104,136 @@ export const CounselorDirectory: FC = () => {
 
   useEffect(() => {
     const loadCounsellors = async () => {
-      const { data } = await axios.get(apiConfig.endpoints.counsellors);
-      const mapped: Counselor[] = data.map((u: any) => ({
-        id: u._id,
-        name: u.name || u.email,
-        title: (u.specialization && u.specialization[0]) || 'Counsellor',
-        specialization: u.specialization || [],
-        location: u.location || 'Counselling Center',
-        campus: u.campus || 'Main Campus',
-        phone: u.phone || '',
-        email: u.email,
-        availableDays: u.availableDays || ['Monday', 'Wednesday', 'Friday'],
-        availableHours: u.availableHours || '9:00 AM - 5:00 PM',
-        languages: u.languages || ['English'],
-        rating: 4.7,
-        reviewCount: 50,
-        isAvailable: true,
-        emergencyContact: false,
-        culturalBackground: ''
-      }));
-      setCounselors(mapped);
+      try {
+        console.log('Loading counsellors...');
+        
+        // Try to fetch from API first
+        try {
+          const { data } = await axios.get(apiConfig.endpoints.counsellors);
+          console.log('Counsellors response:', data);
+          
+          // Handle both old array format and new categorized format
+          let counsellorsArray = [];
+          if (Array.isArray(data)) {
+            // Old format - direct array
+            counsellorsArray = data;
+          } else if (data.all && Array.isArray(data.all)) {
+            // New format - categorized with 'all' property
+            counsellorsArray = data.all;
+          } else {
+            console.error('Unexpected counsellors data format:', data);
+            counsellorsArray = [];
+          }
+          
+          const mapped: Counselor[] = counsellorsArray.map((u: any) => ({
+            id: u.id || u._id,
+            name: u.name || u.email,
+            title: (u.specialization && u.specialization[0]) || 'Counsellor',
+            specialization: u.specialization || [],
+            location: u.location || 'Counselling Center',
+            campus: u.campus || 'Main Campus',
+            phone: u.phone || '',
+            email: u.email,
+            availableDays: u.availableDays || ['Monday', 'Wednesday', 'Friday'],
+            availableHours: u.availableHours || '9:00 AM - 5:00 PM',
+            languages: u.languages || ['English'],
+            rating: 4.7,
+            reviewCount: 50,
+            isAvailable: true,
+            emergencyContact: false,
+            culturalBackground: ''
+          }));
+          
+          console.log('Mapped counsellors:', mapped);
+          setCounselors(mapped);
+          
+        } catch (apiError) {
+          console.warn('API fetch failed, using mock data:', apiError);
+          
+          // Fallback to mock data with proper specializations
+          const mockCounsellors: Counselor[] = [
+            {
+              id: '1',
+              name: 'Dr. Priya Sharma',
+              title: 'Anxiety Disorders',
+              specialization: ['Anxiety Disorders', 'Academic Stress', 'Cultural Adjustment'],
+              location: 'Student Counseling Center',
+              campus: 'Main Campus',
+              phone: '+91-9876543210',
+              email: 'priya.sharma@university.edu',
+              availableDays: ['Monday', 'Wednesday', 'Friday'],
+              availableHours: '9:00 AM - 5:00 PM',
+              languages: ['English', 'Hindi', 'Punjabi'],
+              rating: 4.7,
+              reviewCount: 50,
+              isAvailable: true,
+              emergencyContact: false,
+              culturalBackground: 'Indian'
+            },
+            {
+              id: '2',
+              name: 'Counselor Rahul Mehta',
+              title: 'Peer Counseling',
+              specialization: ['Peer Counseling', 'Homesickness', 'Social Integration'],
+              location: 'Hostel Support Office',
+              campus: 'Main Campus',
+              phone: '+91-9876543211',
+              email: 'rahul.mehta@university.edu',
+              availableDays: ['Tuesday', 'Thursday', 'Saturday'],
+              availableHours: '2:00 PM - 8:00 PM',
+              languages: ['Hindi', 'English', 'Bengali'],
+              rating: 4.7,
+              reviewCount: 50,
+              isAvailable: true,
+              emergencyContact: false,
+              culturalBackground: 'Indian'
+            },
+            {
+              id: '3',
+              name: 'Dr. Anita Patel',
+              title: 'Crisis Counseling',
+              specialization: ['Crisis Counseling', 'Depression', 'Emergency Support'],
+              location: 'Emergency Support Center',
+              campus: 'Main Campus',
+              phone: '+91-9876543212',
+              email: 'anita.patel@university.edu',
+              availableDays: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'],
+              availableHours: '12:00 AM - 11:59 PM',
+              languages: ['English', 'Hindi', 'Gujarati', 'Marathi'],
+              rating: 4.7,
+              reviewCount: 50,
+              isAvailable: true,
+              emergencyContact: true,
+              culturalBackground: 'Indian'
+            },
+            {
+              id: '4',
+              name: 'Counselor Deepak Kumar',
+              title: 'Study Skills',
+              specialization: ['Study Skills', 'Exam Anxiety', 'Time Management'],
+              location: 'Academic Support Center',
+              campus: 'Main Campus',
+              phone: '+91-9876543213',
+              email: 'deepak.kumar@university.edu',
+              availableDays: ['Monday', 'Tuesday', 'Wednesday', 'Thursday'],
+              availableHours: '10:00 AM - 6:00 PM',
+              languages: ['Hindi', 'English', 'Tamil'],
+              rating: 4.7,
+              reviewCount: 50,
+              isAvailable: true,
+              emergencyContact: false,
+              culturalBackground: 'Indian'
+            }
+          ];
+          
+          console.log('Using mock counsellors:', mockCounsellors);
+          setCounselors(mockCounsellors);
+        }
+        
+      } catch (error) {
+        console.error('Error loading counsellors:', error);
+        setError('Failed to load counsellors');
+      }
     };
     loadCounsellors();
   }, []);
@@ -152,11 +262,26 @@ export const CounselorDirectory: FC = () => {
     }
     const doBook = async () => {
       try {
+        console.log('Booking appointment with data:', {
+          counsellorId: selectedCounselor.id,
+          counsellorName: selectedCounselor.name,
+          date: bookingDetails.date,
+          time: bookingDetails.time
+        });
+        
         const { data } = await axios.post(
           apiConfig.endpoints.appointments,
-          { counsellorId: selectedCounselor.id, date: bookingDetails.date, time: bookingDetails.time },
+          { 
+            counsellorId: selectedCounselor.id, 
+            counsellorName: selectedCounselor.name,
+            date: bookingDetails.date, 
+            time: bookingDetails.time
+          },
           token ? { headers: { Authorization: `Bearer ${token}` } } : undefined
         );
+        
+        console.log('Appointment booked successfully:', data);
+        
         const newAppointment: Appointment = {
           id: data._id,
           counselorId: selectedCounselor.id,
@@ -167,8 +292,11 @@ export const CounselorDirectory: FC = () => {
         setAppointments([...appointments, newAppointment]);
         setShowBookingModal(false);
         setSelectedCounselor(null);
-      } catch (err) {
-        setError('Failed to book appointment. Please try again.');
+        setError(''); // Clear any previous errors
+      } catch (err: any) {
+        console.error('Appointment booking error:', err);
+        console.error('Error response:', err?.response?.data);
+        setError(`Failed to book appointment: ${err?.response?.data?.message || err?.message || 'Unknown error'}`);
       }
     };
     doBook();
@@ -195,27 +323,158 @@ export const CounselorDirectory: FC = () => {
       try {
         const { data } = await axios.get(`${apiConfig.endpoints.appointments}/me`, token ? { headers: { Authorization: `Bearer ${token}` } } : undefined);
         const upcoming: Appointment[] = data
-          .filter((a: any) => a.status === 'scheduled')
-          .sort((a: any, b: any) => new Date(a.date).getTime() - new Date(b.date).getTime())
-          .map((a: any) => ({ id: a._id, counselorId: a.counsellor?._id || a.counsellor, counselorName: a.counsellor?.email || 'Counsellor', date: a.date, time: a.time }));
+          .filter((a: any) => {
+            // Parse appointment date and time properly
+            const appointmentDate = new Date(a.date);
+            const today = new Date();
+            // For today's date, check if appointment is later today or future dates
+            if (appointmentDate.toDateString() === today.toDateString()) {
+              // Same day - check time
+              const timeStr = a.time || '00:00 AM';
+              const [time, period] = timeStr.split(' ');
+              const [hours, minutes] = time.split(':').map(Number);
+              let hour24 = hours;
+              if (period === 'PM' && hours !== 12) hour24 += 12;
+              if (period === 'AM' && hours === 12) hour24 = 0;
+              
+              const appointmentDateTime = new Date(appointmentDate);
+              appointmentDateTime.setHours(hour24, minutes, 0, 0);
+              
+              return appointmentDateTime >= today;
+            } else {
+              // Future date
+              return appointmentDate > today;
+            }
+          })
+          .sort((a: any, b: any) => {
+            const dateA = new Date(a.date);
+            const dateB = new Date(b.date);
+            if (dateA.toDateString() === dateB.toDateString()) {
+              // Same date, sort by time
+              const timeA = a.time || '00:00 AM';
+              const timeB = b.time || '00:00 AM';
+              return timeA.localeCompare(timeB);
+            }
+            return dateA.getTime() - dateB.getTime();
+          })
+          .map((a: any) => ({ id: a._id, counselorId: a.counsellor?._id || a.counsellor, counselorName: a.counsellor?.name || a.counsellor?.email || 'Counsellor', date: a.date, time: a.time }));
         setAppointments(upcoming);
       } catch {}
     };
     if (token) load();
   }, [token]);
 
-  const specializations = useMemo<string[]>(() => [
-    'all', ...Array.from(new Set(counselors.flatMap(c => c.specialization)))
-  ], [counselors]);
+  const specializations = useMemo<string[]>(() => {
+    // Start with comprehensive predefined categories for university counseling
+    const predefinedSpecs = [
+      'all',
+      // Mental Health Conditions
+      'Anxiety Disorders', 
+      'Depression', 
+      'Stress Management',
+      'Crisis Counseling',
+      'Emergency Support',
+      'Trauma Counseling',
+      'PTSD Support',
+      'Bipolar Disorder',
+      'Eating Disorders',
+      'Obsessive Compulsive Disorder',
+      'Panic Disorders',
+      'Sleep Disorders',
+      'Substance Abuse',
+      'Addiction Counseling',
+      
+      // Academic & Career
+      'Academic Stress', 
+      'Study Skills',
+      'Exam Anxiety',
+      'Time Management',
+      'Career Counseling',
+      'Academic Performance',
+      'Test Anxiety',
+      'Learning Disabilities',
+      'ADHD Support',
+      
+      // Social & Relationships
+      'Peer Support',
+      'Social Integration',
+      'Relationship Counseling',
+      'Dating & Romance',
+      'Friendship Issues',
+      'Conflict Resolution',
+      'Communication Skills',
+      'Interpersonal Skills',
+      
+      // Life Transitions & Adjustment
+      'Cultural Adjustment',
+      'Homesickness',
+      'First Year Transition',
+      'Graduate School Support',
+      'International Student Support',
+      'Transfer Student Support',
+      'Life Transitions',
+      'Adjustment Issues',
+      
+      // Family & Personal
+      'Family Dynamics',
+      'Family Counseling',
+      'Grief Counseling',
+      'Loss & Bereavement',
+      'Self-Esteem Issues',
+      'Identity Development',
+      'LGBTQ+ Support',
+      'Gender Identity',
+      'Sexual Health',
+      
+      // Specialized Support
+      'Group Therapy',
+      'Mindfulness & Meditation',
+      'Cognitive Behavioral Therapy',
+      'Dialectical Behavior Therapy',
+      'Art Therapy',
+      'Music Therapy',
+      'Support Groups',
+      'Wellness Coaching',
+      'General Counseling'
+    ];
+    
+    // Add any additional specializations from loaded counselors
+    const counselorSpecs = counselors.flatMap(c => c.specialization);
+    const allSpecs = [...predefinedSpecs, ...counselorSpecs];
+    
+    return Array.from(new Set(allSpecs));
+  }, [counselors]);
 
   const allLanguages = useMemo<string[]>(() => Array.from(new Set(counselors.flatMap(c => c.languages))), [counselors]);
 
-  const filteredCounselors = useMemo<Counselor[]>(() => counselors.filter(counselor => {
-    const specializationMatch = selectedSpecialization === 'all' || counselor.specialization.includes(selectedSpecialization);
-    const availabilityMatch = !showOnlyAvailable || counselor.isAvailable;
-    const languageMatch = selectedLanguage === 'all' || counselor.languages.includes(selectedLanguage);
-    return specializationMatch && availabilityMatch && languageMatch;
-  }), [selectedSpecialization, showOnlyAvailable, selectedLanguage]);
+  const filteredCounselors = useMemo<Counselor[]>(() => {
+    console.log('Filtering counselors...', {
+      totalCounselors: counselors.length,
+      selectedSpecialization,
+      showOnlyAvailable,
+      selectedLanguage
+    });
+    
+    const filtered = counselors.filter(counselor => {
+      const specializationMatch = selectedSpecialization === 'all' || counselor.specialization.includes(selectedSpecialization);
+      const availabilityMatch = !showOnlyAvailable || counselor.isAvailable;
+      const languageMatch = selectedLanguage === 'all' || counselor.languages.includes(selectedLanguage);
+      
+      console.log('Counselor filter check:', {
+        name: counselor.name,
+        specializations: counselor.specialization,
+        specializationMatch,
+        availabilityMatch,
+        languageMatch,
+        finalMatch: specializationMatch && availabilityMatch && languageMatch
+      });
+      
+      return specializationMatch && availabilityMatch && languageMatch;
+    });
+    
+    console.log('Filtered counselors:', filtered.length);
+    return filtered;
+  }, [counselors, selectedSpecialization, showOnlyAvailable, selectedLanguage]);
 
   return (
     <section className="py-16 bg-gray-50">

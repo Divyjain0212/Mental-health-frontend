@@ -17,7 +17,7 @@ const moodLevels = { 1: 'Sad', 2: 'Okay', 3: 'Happy' };
 const StudentDashboard = () => {
   const { user, token } = useAuth();
   const [selectedMood, setSelectedMood] = useState<string | null>(null);
-  const [appointments, setAppointments] = useState<Array<{ _id: string; date: string; time: string; counsellor?: { email: string }, status?: string }>>([]);
+  const [appointments, setAppointments] = useState<Array<{ _id: string; date: string; time: string; counsellor?: { email: string; name?: string }, status?: string }>>([]);
   const [points, setPoints] = useState<number>(0);
   const [streak, setStreak] = useState<number>(0);
   const [history, setHistory] = useState<{ day: string; mood: number }[]>(mockMoodHistory);
@@ -52,40 +52,141 @@ const StudentDashboard = () => {
     const load = async () => {
       try {
         const { data } = await axios.get(`${apiConfig.endpoints.appointments}/me`, token ? { headers: { Authorization: `Bearer ${token}` } } : undefined);
+        console.log('Raw appointments data:', data);
+        console.log('Current user token:', token);
         // For student, entries include counsellor populated
         const upcoming = data
-          .filter((a: any) => a.status === 'scheduled')
-          .sort((a: any, b: any) => new Date(a.date).getTime() - new Date(b.date).getTime())
+          .filter((a: any) => {
+            // Parse appointment date and time properly
+            const appointmentDate = new Date(a.date);
+            const today = new Date();
+            // For today's date, check if appointment is later today or future dates
+            if (appointmentDate.toDateString() === today.toDateString()) {
+              // Same day - check time
+              const timeStr = a.time || '00:00 AM';
+              const [time, period] = timeStr.split(' ');
+              const [hours, minutes] = time.split(':').map(Number);
+              let hour24 = hours;
+              if (period === 'PM' && hours !== 12) hour24 += 12;
+              if (period === 'AM' && hours === 12) hour24 = 0;
+              
+              const appointmentDateTime = new Date(appointmentDate);
+              appointmentDateTime.setHours(hour24, minutes, 0, 0);
+              
+              console.log('Same day appointment:', {
+                id: a._id,
+                originalTime: a.time,
+                parsedDateTime: appointmentDateTime.toISOString(),
+                now: today.toISOString(),
+                isUpcoming: appointmentDateTime >= today
+              });
+              
+              return appointmentDateTime >= today;
+            } else {
+              // Future date
+              const isUpcoming = appointmentDate > today;
+              console.log('Future date appointment:', {
+                id: a._id,
+                date: a.date,
+                appointmentDate: appointmentDate.toISOString(),
+                today: today.toISOString(),
+                isUpcoming
+              });
+              return isUpcoming;
+            }
+          })
+          .sort((a: any, b: any) => {
+            const dateA = new Date(a.date);
+            const dateB = new Date(b.date);
+            if (dateA.toDateString() === dateB.toDateString()) {
+              // Same date, sort by time
+              const timeA = a.time || '00:00 AM';
+              const timeB = b.time || '00:00 AM';
+              return timeA.localeCompare(timeB);
+            }
+            return dateA.getTime() - dateB.getTime();
+          })
           .slice(0, 5);
+        console.log('Filtered upcoming appointments:', upcoming);
         setAppointments(upcoming);
-      } catch {}
+      } catch (error) {
+        console.error('Error loading appointments:', error);
+      }
     };
     if (token) load();
   }, [token]);
 
   const cancelAppointment = async (id: string) => {
+    if (!window.confirm('Are you sure you want to cancel this appointment?')) {
+      return;
+    }
+    
     try {
       await axios.delete(`${apiConfig.endpoints.appointments}/${id}`, token ? { headers: { Authorization: `Bearer ${token}` } } : undefined);
+      
+      // Show success message
+      alert('Appointment cancelled successfully!');
+      
       // Refetch after delete to ensure backend state is reflected
       const { data } = await axios.get(`${apiConfig.endpoints.appointments}/me`, token ? { headers: { Authorization: `Bearer ${token}` } } : undefined);
       const upcoming = data
-        .filter((a: any) => a.status === 'scheduled')
-        .sort((a: any, b: any) => new Date(a.date).getTime() - new Date(b.date).getTime())
+        .filter((a: any) => {
+          // Parse appointment date and time properly
+          const appointmentDate = new Date(a.date);
+          const today = new Date();
+          // For today's date, check if appointment is later today or future dates
+          if (appointmentDate.toDateString() === today.toDateString()) {
+            // Same day - check time
+            const timeStr = a.time || '00:00 AM';
+            const [time, period] = timeStr.split(' ');
+            const [hours, minutes] = time.split(':').map(Number);
+            let hour24 = hours;
+            if (period === 'PM' && hours !== 12) hour24 += 12;
+            if (period === 'AM' && hours === 12) hour24 = 0;
+            
+            const appointmentDateTime = new Date(appointmentDate);
+            appointmentDateTime.setHours(hour24, minutes, 0, 0);
+            
+            return appointmentDateTime >= today;
+          } else {
+            // Future date
+            return appointmentDate > today;
+          }
+        })
+        .sort((a: any, b: any) => {
+          const dateA = new Date(a.date);
+          const dateB = new Date(b.date);
+          if (dateA.toDateString() === dateB.toDateString()) {
+            // Same date, sort by time
+            const timeA = a.time || '00:00 AM';
+            const timeB = b.time || '00:00 AM';
+            return timeA.localeCompare(timeB);
+          }
+          return dateA.getTime() - dateB.getTime();
+        })
         .slice(0, 5);
       setAppointments(upcoming);
-    } catch {}
+    } catch (error) {
+      console.error('Failed to cancel appointment:', error);
+      alert('Failed to cancel appointment. Please try again.');
+    }
   };
 
   const handleMoodSelect = async (mood: string) => {
     setSelectedMood(mood);
     try {
-      const { data } = await axios.post(apiConfig.endpoints.moods, { mood, source: 'self' });
+      const { data } = await axios.post(apiConfig.endpoints.moods, 
+        { mood, intensity: 5, source: 'self' }, 
+        token ? { headers: { Authorization: `Bearer ${token}` } } : undefined
+      );
       if (data?.gamification) {
         setPoints(data.gamification.points);
         setStreak(data.gamification.streakCount);
       }
       // Refresh stats after check-in
-      const stats = await axios.get(`${apiConfig.endpoints.moods}/stats`);
+      const stats = await axios.get(`${apiConfig.endpoints.moods}/stats`, 
+        token ? { headers: { Authorization: `Bearer ${token}` } } : undefined
+      );
       if (stats?.data) {
         setHistory(stats.data.history7d || []);
         setPoints(stats.data.points || 0);
@@ -98,7 +199,9 @@ const StudentDashboard = () => {
   useEffect(() => {
     const loadStats = async () => {
       try {
-        const { data } = await axios.get(`${apiConfig.endpoints.moods}/stats`);
+        const { data } = await axios.get(`${apiConfig.endpoints.moods}/stats`, 
+          token ? { headers: { Authorization: `Bearer ${token}` } } : undefined
+        );
         setHistory(data.history7d || []);
         setPoints(data.points || 0);
         setStreak(data.streakCount || 0);
@@ -204,7 +307,7 @@ const StudentDashboard = () => {
                   <div key={a._id} className="border rounded p-3 flex items-center justify-between">
                     <div>
                       <div className="font-medium">{new Date(a.date).toLocaleDateString('en-GB')} at {a.time}</div>
-                      <div className="text-xs text-gray-600">Counsellor: {a.counsellor?.email || 'TBD'}</div>
+                      <div className="text-xs text-gray-600">Counsellor: {a.counsellor?.name || a.counsellor?.email || 'TBD'}</div>
                     </div>
                     <button onClick={() => cancelAppointment(a._id)} className="text-xs px-3 py-1 bg-red-600 text-white rounded">Cancel</button>
                   </div>

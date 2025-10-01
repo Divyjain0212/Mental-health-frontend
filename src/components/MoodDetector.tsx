@@ -1,11 +1,13 @@
 import React, { useEffect, useRef, useState } from 'react';
 import axios from 'axios';
 import { apiConfig } from '../utils/apiConfig';
+import { useAuth } from '../contexts/AuthContext';
 
 // Lightweight on-device estimator using face expressions via face-api.js
 // Requires models to be loaded from a public path /models (add files in public if available)
 
 const MoodDetector: React.FC = () => {
+  const { token } = useAuth();
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const [detecting, setDetecting] = useState(false);
   const [mood, setMood] = useState<string>('Neutral');
@@ -58,7 +60,10 @@ const MoodDetector: React.FC = () => {
     } catch {}
     setMood(detected);
     try {
-      await axios.post(apiConfig.endpoints.moods, { mood: detected, source: 'camera' });
+      await axios.post(apiConfig.endpoints.moods, 
+        { mood: detected, intensity: 5, source: 'camera' },
+        token ? { headers: { Authorization: `Bearer ${token}` } } : undefined
+      );
     } catch {}
   };
 

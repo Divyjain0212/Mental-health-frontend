@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Token Debug Test</title>
+</head>
+<body>
+    <h1>Token Debug Test</h1>
+    <div id="results"></div>
+    
+    <script>
+        const API_BASE = 'https://mental-health-backend-gamma.vercel.app';
+        const results = document.getElementById('results');
+        
+        function log(message) {
+            results.innerHTML += `<p>${new Date().toLocaleTimeString()}: ${message}</p>`;
+            console.log(message);
+        }
+        
+        async function testTokenValidation() {
+            try {
+                // First login
+                log('🔐 Testing login...');
+                const loginResponse = await fetch(`${API_BASE}/api/auth/login`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        email: 'test@student.com',
+                        password: 'password123'
+                    })
+                });
+                
+                const loginData = await loginResponse.json();
+                log(`Login response: ${JSON.stringify(loginData)}`);
+                
+                if (!loginData.token) {
+                    log('❌ No token received');
+                    return;
+                }
+                
+                const token = loginData.token;
+                log(`✅ Token received: ${token.substring(0, 20)}...`);
+                
+                // Test profile endpoint
+                log('👤 Testing profile endpoint...');
+                const profileResponse = await fetch(`${API_BASE}/api/auth/profile`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+                
+                const profileData = await profileResponse.json();
+                log(`Profile response: ${JSON.stringify(profileData)}`);
+                
+                // Test forum post creation
+                log('📝 Testing forum post creation...');
+                const forumResponse = await fetch(`${API_BASE}/api/forum`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({
+                        title: 'Test Post',
+                        content: 'This is a test post content',
+                        category: 'general',
+                        isAnonymous: false
+                    })
+                });
+                
+                const forumData = await forumResponse.json();
+                log(`Forum response (${forumResponse.status}): ${JSON.stringify(forumData)}`);
+                
+                if (forumResponse.ok) {
+                    log('✅ Forum post created successfully!');
+                } else {
+                    log(`❌ Forum post failed: ${forumData.message}`);
+                }
+                
+            } catch (error) {
+                log(`❌ Error: ${error.message}`);
+            }
+        }
+        
+        // Run test
+        testTokenValidation();
+    </script>
+</body>
+</html>

@@ -31,7 +31,10 @@ export const AIChat: React.FC = () => {
 
   const fetchAIResponse = async (userMessage: string): Promise<string> => {
     try {
-      const { data } = await axios.post(apiConfig.endpoints.chat, { message: userMessage });
+      const { data } = await axios.post(apiConfig.endpoints.chat, 
+        { message: userMessage },
+        token ? { headers: { Authorization: `Bearer ${token}` } } : undefined
+      );
       return data.reply || 'Sorry, I could not generate a response.';
     } catch (e) {
       return 'Sorry, I am having trouble responding right now. Please try again later.';

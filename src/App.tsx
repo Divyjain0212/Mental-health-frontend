@@ -13,7 +13,7 @@ import CounsellorDashboard from './components/CounsellorDashboard';
 import { ResourcesSection } from './components/ResourcesSection';
 import { RelaxationSection } from './components/RelaxationSection';
 import { AIChat } from './components/AIChat';
-import { PeerForum } from './components/PeerForum';
+import { PeerForum } from './components/PeerForumMinimal';
 import { CounselorDirectory } from './components/CounselorDirectory';
 import Games from './components/Games';
 import Redeem from './components/Redeem';
@@ -89,6 +89,7 @@ function AppShell() {
               <Route path="/relaxation" element={<RelaxationSection />} />
               <Route path="/ai-support" element={<AIChat />} />
               <Route path="/peer-forum" element={<PeerForum />} />
+              <Route path="/peersupport" element={<PeerForum />} />
               <Route path="/counselors" element={<CounselorDirectory />} />
               <Route path="/games" element={<Games />} />
               <Route path="/redeem" element={<Redeem />} />

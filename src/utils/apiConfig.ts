@@ -1,5 +1,6 @@
-// API configuration utility
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
+// API configuration utility  
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://mental-health-backend-ogbdhdm2d-divyjain0212s-projects.vercel.app';
+// For local testing: 'http://localhost:5000'
 
 export const apiConfig = {
   baseURL: API_BASE_URL,
