@@ -251,6 +251,7 @@ export const PeerForum: React.FC = () => {
       default: return 'Student';
     }
   };
+  
   const getRoleColor = (role: string) => {
     switch (role) {
       case 'volunteer': return 'text-green-600';
